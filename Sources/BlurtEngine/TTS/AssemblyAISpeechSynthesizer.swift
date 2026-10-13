@@ -27,7 +27,7 @@ import Synchronization
 struct AssemblyAISpeechSynthesizer: Sendable {
   static let sampleRate = 24_000
   static let voice = "jane"
-  static let endpoint = URL(staticString: "wss://streaming-tts.assemblyai.com/v1/ws/")
+  static let endpoint = SelfHostedServer.speechWebSocket
 
   private let apiKeyProvider: @Sendable () -> String?
   private let connect: @Sendable (URLRequest) -> any SpeechSocket

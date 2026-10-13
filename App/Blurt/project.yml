@@ -132,9 +132,11 @@ targets:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG UITEST_HOOKS
         Debug-Local:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
-        # The shipping identity, opted into by the one configuration that ships.
+        # Self-hosted fork: its own bundle id, so it never matches HostIdentity.blurt and
+        # UpdaterModel never starts Sparkle (upstream's appcast would replace this build),
+        # and it installs beside upstream Blurt rather than over it.
         Release:
-          PRODUCT_BUNDLE_IDENTIFIER: dev.alex.blurt
+          PRODUCT_BUNDLE_IDENTIFIER: com.pipeshift.blurt
           BLURT_APP_NAME: Blurt
     sources:
       - path: Blurt

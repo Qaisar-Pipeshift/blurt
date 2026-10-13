@@ -82,7 +82,7 @@ public struct AssemblyAITranscriber: TranscriberProtocol {
   /// internal member.
   public init(
     apiKeyProvider: @escaping @Sendable () -> String? = { APIKeyStore.current },
-    baseURL: URL = URL(staticString: "https://dictation.assemblyai.com"),
+    baseURL: URL = SelfHostedServer.base,
     transport: any HTTPTransport = URLSession.shared,
     enhancedTranscripts: (@Sendable () -> Bool)? = nil,
     customStyle: (@Sendable () -> String?)? = nil

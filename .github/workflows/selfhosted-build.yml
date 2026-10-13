@@ -1,0 +1,81 @@
+# Builds the self-hosted fork (branch `selfhosted`) and attaches an unsigned (ad-hoc) Blurt.app zip to a prerelease.
+# Ad-hoc signing: no Apple Developer ID is involved, so the app is not notarized — first launch needs
+# right-click → Open (or System Settings → Privacy & Security → Open Anyway). Hardened runtime is off because it
+# only matters for notarization and, with ad-hoc signing, library validation would refuse the embedded Sparkle
+# framework. Sparkle never starts in this build anyway (bundle id com.pipeshift.blurt; see project.yml).
+name: Self-hosted build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [selfhosted]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: selfhosted-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Generate project
+        working-directory: App/Blurt
+        run: xcodegen generate
+
+      - name: Build Release (ad-hoc signed)
+        working-directory: App/Blurt
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Blurt.xcodeproj \
+            -scheme Blurt \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            ENABLE_HARDENED_RUNTIME=NO \
+            build
+
+      - name: Package
+        run: |
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products/Release" -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          codesign --verify --deep --strict "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist"
+          ditto -c -k --keepParent "$APP" Blurt-selfhosted.zip
+          shasum -a 256 Blurt-selfhosted.zip | tee Blurt-selfhosted.zip.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Blurt-selfhosted
+          path: |
+            Blurt-selfhosted.zip
+            Blurt-selfhosted.zip.sha256
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="selfhosted-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" Blurt-selfhosted.zip Blurt-selfhosted.zip.sha256 \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Blurt self-hosted build ${GITHUB_RUN_NUMBER}" \
+            --notes "Self-hosted fork build from ${GITHUB_SHA}. Ad-hoc signed; first launch: right-click → Open."

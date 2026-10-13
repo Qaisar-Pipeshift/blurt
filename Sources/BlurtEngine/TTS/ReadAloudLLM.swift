@@ -22,7 +22,7 @@ import Foundation
 /// through, would otherwise read out an answer nobody asked for. An answer has
 /// no such fallback, since there is nothing else to say.
 struct ReadAloudLLM: Sendable {
-  static let endpoint = URL(staticString: "https://llm-gateway.assemblyai.com/v1/chat/completions")
+  static let endpoint = SelfHostedServer.chatCompletions
 
   /// AssemblyAI's own hosted small model: the docs' quickstart model, the
   /// cheapest tier on the gateway's `/v1/models` list (2026-10-02), and served
